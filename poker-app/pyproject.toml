@@ -1,0 +1,27 @@
+# pyproject.toml
+
+[project]
+name = "poker-app"
+version = "0.1.0"
+description = "A poker application showcasing how to use a custom evaluator in a simple GenAI app."
+authors = [ {name = "Juho Ylikylä", email = "juho.ylikyla@rootsignals.ai"}, ]
+requires-python = ">= 3.13"
+dependencies = [
+    "devtools>=0.12.2",
+    "pydantic-ai>=0.0.30",
+    "ruff>=0.9.9",
+    "root-signals>=1.5.2",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "UP",
+    "B",
+    "SIM",
+    "I",
+]
+ignore = [
+    "E501",
+]
