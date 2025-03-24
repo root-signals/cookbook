@@ -21,7 +21,6 @@ The evaluator result and justification is then saved to the database. The data i
 ```bash
 uv sync
 touch .env
-# Add OPENAI_API_KEY to .env
 # Add ROOTSIGNALS_API_KEY to .env
 ```
 

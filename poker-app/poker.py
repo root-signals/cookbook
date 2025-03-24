@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
@@ -8,7 +9,7 @@ from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.format_as_xml import format_as_xml
 from pydantic_ai.models.openai import OpenAIModel
-from pydantic_graph import BaseNode, Edge, End, Graph, GraphRunContext, HistoryStep
+from pydantic_graph import BaseNode, Edge, End, Graph, GraphRunContext
 from root import RootSignals
 
 from poker_data import Card, Rank, Suit, check_hand
@@ -27,7 +28,12 @@ class AIPlayerAction(BaseModel):
     amount: int = 0
 
 
-model = OpenAIModel("gpt-4o-mini")
+model = OpenAIModel(
+    "gpt-4o-mini",
+    # Uses Root Signals proxy.
+    base_url="https://api.app.rootsignals.ai/openai/",
+    api_key=os.getenv("ROOTSIGNALS_API_KEY"),
+)
 
 ai_player = Agent(
     model=model,
@@ -418,12 +424,12 @@ poker_graph = Graph(
 async def run_game():
     state = PokerState()
     node = InitGame()
-    history: list[HistoryStep[PokerState, None]] = []
 
-    while True:
-        node = await poker_graph.next(node, history, state=state)
-        if isinstance(node, End):
-            break
+    async with poker_graph.iter(node, state=state, persistence=None) as run:
+        while True:
+            node = await run.next()
+            if isinstance(node, End):
+                break
 
 
 if __name__ == "__main__":
