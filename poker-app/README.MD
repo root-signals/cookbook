@@ -10,9 +10,9 @@ The evaluator ensures the quality of the game play does not decrease over time w
 
 The Root Signals evaluator takes the game state as input and outputs a score and justifications for the score.
 
-The evaluator result and justification is then saved to the database. The data is used as additional context for the LLM to improve the game play. 📈
+The evaluator result and justification is then saved to the database. The data is used as additional context for the LLM to improve the game play.
 
-## 🚀 Setup
+## 🔑 Setup
 
 ### Get Your API Key
 
@@ -24,7 +24,7 @@ touch .env
 # Add ROOTSIGNALS_API_KEY to .env
 ```
 
-## Run
+## 🚀 Run
 
 ```bash
 UV_ENV_FILE=.env uv run poker.py
