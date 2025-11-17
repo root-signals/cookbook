@@ -685,7 +685,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "devtools" },
     { name = "pydantic-ai" },
-    { name = "root-signals" },
+    { name = "scorable" },
     { name = "ruff" },
 ]
 
@@ -693,7 +693,7 @@ dependencies = [
 requires-dist = [
     { name = "devtools", specifier = ">=0.12.2" },
     { name = "pydantic-ai", specifier = ">=0.0.30" },
-    { name = "root-signals", specifier = ">=1.5.2" },
+    { name = "scorable", specifier = ">=1.5.2" },
     { name = "ruff", specifier = ">=0.9.9" },
 ]
 
@@ -976,7 +976,7 @@ wheels = [
 ]
 
 [[package]]
-name = "root-signals"
+name = "scorable"
 version = "1.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [

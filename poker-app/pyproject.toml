@@ -10,7 +10,7 @@ dependencies = [
     "devtools>=0.12.2",
     "pydantic-ai>=0.0.30",
     "ruff>=0.9.9",
-    "root-signals>=1.5.2",
+    "scorable>=1.6.6",
 ]
 
 [tool.ruff.lint]

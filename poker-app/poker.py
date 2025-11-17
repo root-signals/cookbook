@@ -10,7 +10,7 @@ from pydantic_ai import Agent
 from pydantic_ai.format_as_xml import format_as_xml
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_graph import BaseNode, Edge, End, Graph, GraphRunContext
-from root import RootSignals
+from scorable import Scorable
 
 from poker_data import Card, Rank, Suit, check_hand
 from poker_db import (
@@ -30,9 +30,9 @@ class AIPlayerAction(BaseModel):
 
 model = OpenAIModel(
     "gpt-4o-mini",
-    # Uses Root Signals proxy.
-    base_url="https://api.app.rootsignals.ai/openai/",
-    api_key=os.getenv("ROOTSIGNALS_API_KEY"),
+    # Uses Scorable proxy.
+    base_url="https://api.scorable.ai/openai/",
+    api_key=os.getenv("SCORABLE_API_KEY"),
 )
 
 ai_player = Agent(
@@ -371,9 +371,9 @@ class ShowDown(BaseNode[PokerState, None, None]):
         return PostGameAnalysis()
 
 
-# Root Signals custom evaluator
+# Scorable custom evaluator
 async def get_poker_evaluator():
-    client = RootSignals(run_async=True)
+    client = Scorable(run_async=True)
     return await client.evaluators.acreate(
         name="Poker evaluator",
         predicate="""
