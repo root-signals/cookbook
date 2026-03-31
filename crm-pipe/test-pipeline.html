@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Queries Pipeline Test Bench</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --card-bg: #141420;
+            --input-bg: #0d0d18;
+            --border-color: #1e1e30;
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --accent-1: #3b82f6;
+            --accent-2: #f59e0b;
+            --accent-3: #22c55e;
+            --danger: #ef4444;
+            --link-blue-1: #0d1025;
+            --link-blue-2: #0f0d22;
+            --link-border-1: #1a2040;
+            --link-border-2: #1e1840;
+            --font-main: system-ui, -apple-system, sans-serif;
+            --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            line-height: 1.5;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .controls-top {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            font-size: 1rem;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .health-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .health-display.idle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        .health-display.pass {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .health-display.warn {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .health-display.fail {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .health-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .health-display.idle .health-label { color: var(--text-muted); }
+        .health-display.pass .health-label { color: #22c55e; }
+        .health-display.warn .health-label { color: #f59e0b; }
+        .health-display.fail .health-label { color: #ef4444; }
+
+        .health-score {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .pipeline-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stage-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .accent-bar {
+            height: 4px;
+            width: 100%;
+        }
+
+        .stage-1 .accent-bar { background-color: var(--accent-1); }
+        .stage-2 .accent-bar { background-color: var(--accent-2); }
+        .stage-3 .accent-bar { background-color: var(--accent-3); }
+
+        .card-content {
+            padding: 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .stage-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .stage-desc {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+            min-height: 2.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        textarea {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: #e2e8f0;
+            padding: 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4b5563;
+        }
+
+        /* Linked pipeline fields share background + text color */
+        #res-1, #req-2, #query-3 {
+            background-color: #0a1228;
+            border-color: #1e3a5f;
+            color: #7cb9f7;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .load-example {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+        }
+
+        .load-example:hover {
+            color: var(--text-main);
+        }
+
+        .btn-evaluate {
+            flex: 1;
+            margin-left: 1rem;
+            color: white;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+
+        .btn-evaluate:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-evaluate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: none;
+        }
+
+        .btn-evaluate { background-color: var(--accent-1); }
+
+        .results-area {
+            margin-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+            min-height: 80px;
+        }
+
+        .result-card {
+            background-color: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .result-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .evaluator-name {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .score-value {
+            font-weight: 700;
+        }
+
+        .justification-toggle {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.125rem;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            transition: background 0.15s, color 0.15s;
+            display: flex;
+            align-items: center;
+            line-height: 1;
+        }
+
+        .justification-toggle:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+        }
+
+        .justification-toggle .caret {
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+
+        .justification-toggle.open .caret {
+            transform: rotate(90deg);
+        }
+
+        .justification-body {
+            display: none;
+            overflow: hidden;
+        }
+
+        .justification-body.open {
+            display: block;
+        }
+
+        .stage-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stage-gate {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            min-height: 34px;
+            transition: all 0.3s ease;
+        }
+
+        .stage-gate.idle {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+
+        .stage-gate.pass {
+            background: rgba(34, 197, 94, 0.12);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .stage-gate.warn {
+            background: rgba(245, 158, 11, 0.12);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .stage-gate.fail {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .stage-gate.skipped {
+            background: rgba(255, 255, 255, 0.02);
+            color: #6b7280;
+            border: 1px dashed #374151;
+        }
+
+        .gate-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .stage-gate.idle .gate-dot { background: #4b5563; }
+        .stage-gate.pass .gate-dot { background: #22c55e; box-shadow: 0 0 8px #22c55e80; }
+        .stage-gate.warn .gate-dot { background: #f59e0b; box-shadow: 0 0 8px #f59e0b80; }
+        .stage-gate.fail .gate-dot { background: #ef4444; box-shadow: 0 0 8px #ef444480; }
+        .stage-gate.skipped .gate-dot { background: #374151; }
+
+        .score-bar-bg {
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .justification {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .justification h1, .justification h2, .justification h3 {
+            color: #c4b5fd;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin: 0.75rem 0 0.25rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .justification h1:first-child, .justification h2:first-child, .justification h3:first-child {
+            margin-top: 0;
+        }
+
+        .justification ol, .justification ul {
+            padding-left: 1.25rem;
+            margin: 0.35rem 0;
+        }
+
+        .justification li {
+            margin-bottom: 0.3rem;
+        }
+
+        .justification ul ul, .justification ol ul, .justification ol ol {
+            margin: 0.15rem 0;
+        }
+
+        .justification strong {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .justification code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+        }
+
+        .justification p {
+            margin: 0.3rem 0;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.85rem;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            h1 { font-size: 1.5rem; }
+            .pipeline-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CRM Queries Pipeline Test Bench</h1>
+        <p class="subtitle">Test the 3-stage natural language → SQL → answer pipeline</p>
+        
+        <div class="controls-top">
+            <button id="loadAllBtn" class="btn-primary" style="background: linear-gradient(135deg, #374151, #4b5563);" onclick="loadAllExamples()">Load All Examples</button>
+            <button id="runAllBtn" class="btn-primary">Run All Stages</button>
+            <div class="health-display idle" id="healthDisplay">
+                <span class="health-label">Pipeline Health</span>
+                <span id="overallHealth" class="health-score">--</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="pipeline-grid">
+        <!-- Stage 1 -->
+        <div class="stage-column">
+            <div class="stage-gate idle" id="gate-1">
+                <span class="gate-dot"></span>
+                <span>Stage 1: Pending</span>
+            </div>
+            <div class="stage-card stage-1" id="card-1">
+                <div class="accent-bar"></div>
+                <div class="card-content">
+                    <div class="stage-header">
+                        <h2 class="stage-title">Stage 1: Query Understanding</h2>
+                    </div>
+                    <p class="stage-desc">Converts natural language user queries into structured intent specifications.</p>
+
+                    <div class="input-group">
+                        <label class="input-label">Request (Input)</label>
+                        <textarea id="req-1" placeholder="How many deals closed last week by the London team?"></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Response (Output)</label>
+                        <textarea id="res-1" placeholder='{"intent": "count_deals", "filters": {"status": "closed", "timeframe": "last_week", "team": "London"}, "aggregation": "count"}'></textarea>
+                    </div>
+
+                    <div class="card-actions">
+                        <button class="load-example" onclick="loadExample(1)">Load Example</button>
+                        <button class="btn-evaluate" onclick="evaluateStage(1)">Evaluate</button>
+                    </div>
+
+                    <div class="results-area" id="results-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 2 -->
+        <div class="stage-column">
+            <div class="stage-gate idle" id="gate-2">
+                <span class="gate-dot"></span>
+                <span>Stage 2: Pending</span>
+            </div>
+            <div class="stage-card stage-2" id="card-2">
+                <div class="accent-bar"></div>
+                <div class="card-content">
+                    <div class="stage-header">
+                        <h2 class="stage-title">Stage 2: SQL Generation</h2>
+                    </div>
+                    <p class="stage-desc">Generates safe SQL queries based on intent spec and database schema.</p>
+
+                    <div class="input-group">
+                        <label class="input-label">Request — QuerySpec (Input)</label>
+                        <textarea id="req-2" placeholder='{"intent": "count_deals", "filters": {"status": "closed", "timeframe": "last_week", "team": "London"}, "aggregation": "count"}'></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Schema</label>
+                        <textarea id="schema-2" placeholder='CREATE TABLE deals (id SERIAL PRIMARY KEY, status VARCHAR(20), closed_date TIMESTAMP, team_id INT, amount DECIMAL(10,2));
+CREATE TABLE teams (id SERIAL PRIMARY KEY, name VARCHAR(100), region VARCHAR(50));'></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Response — SQL (Output)</label>
+                        <textarea id="res-2" placeholder="SELECT COUNT(*) as deal_count FROM deals d JOIN teams t ON d.team_id = t.id WHERE d.status = 'closed' AND d.closed_date >= NOW() - INTERVAL '7 days' AND t.name = 'London'"></textarea>
+                    </div>
+
+                    <div class="card-actions">
+                        <button class="load-example" onclick="loadExample(2)">Load Example</button>
+                        <button class="btn-evaluate" onclick="evaluateStage(2)">Evaluate</button>
+                    </div>
+
+                    <div class="results-area" id="results-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 3 -->
+        <div class="stage-column">
+            <div class="stage-gate idle" id="gate-3">
+                <span class="gate-dot"></span>
+                <span>Stage 3: Pending</span>
+            </div>
+            <div class="stage-card stage-3" id="card-3">
+                <div class="accent-bar"></div>
+                <div class="card-content">
+                    <div class="stage-header">
+                        <h2 class="stage-title">Stage 3: Answer Formulation</h2>
+                    </div>
+                    <p class="stage-desc">Synthesizes SQL results into a natural language narrative answer.</p>
+
+                    <div class="input-group">
+                        <label class="input-label">Query — QuerySpec</label>
+                        <textarea id="query-3" placeholder='{"intent": "count_deals", "filters": {"status": "closed", "timeframe": "last_week", "team": "London"}, "aggregation": "count"}'></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Result Set</label>
+                        <textarea id="resultset-3" placeholder='[{"deal_count": 47}]'></textarea>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Response — Natural Language Answer</label>
+                        <textarea id="res-3" placeholder="The London team closed 47 deals last week, which represents a 12% increase compared to the previous week."></textarea>
+                    </div>
+
+                    <div class="card-actions">
+                        <button class="load-example" onclick="loadExample(3)">Load Example</button>
+                        <button class="btn-evaluate" onclick="evaluateStage(3)">Evaluate</button>
+                    </div>
+
+                    <div class="results-area" id="results-3"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_KEY = '4zXTUtM0.ylyZFESnp5Bo78BzbESXPnXfqBzRj2Gx';
+        const API_ENDPOINT = 'https://api.scorable.ai/v1/judges/{judgeId}/execute/';
+
+        const JUDGE_IDS = {
+            1: 'da471a7e-079f-4160-b2bc-ad20d19d6d12',
+            2: '4a77dce6-a9b1-468d-9315-ab527fbb7391',
+            3: 'b934f6c2-68f6-496d-b66a-8213283cdafb'
+        };
+
+        const EXAMPLES = {
+            1: {
+                req: "How many deals closed last week by the London team?",
+                res: '{"intent": "count_deals", "filters": {"status": "closed", "timeframe": "last_week", "team": "London"}, "aggregation": "count", "confidence": 0.95}'
+            },
+            2: {
+                req: '{"intent": "count_deals", "filters": {"status": "closed", "timeframe": "last_week", "team": "London"}, "aggregation": "count"}',
+                schema: 'CREATE TABLE deals (id SERIAL PRIMARY KEY, status VARCHAR(20), closed_date TIMESTAMP, team_id INT, amount DECIMAL(10,2));\nCREATE TABLE teams (id SERIAL PRIMARY KEY, name VARCHAR(100), region VARCHAR(50));',
+                res: "SELECT COUNT(*) as deal_count FROM deals d JOIN teams t ON d.team_id = t.id WHERE d.status = 'closed' AND d.closed_date >= NOW() - INTERVAL '7 days' AND t.name = 'London'"
+            },
+            3: {
+                query: '{"intent": "count_deals", "filters": {"status": "closed", "timeframe": "last_week", "team": "London"}, "aggregation": "count"}',
+                resultset: '[{"deal_count": 47}]',
+                res: "The London team closed 47 deals last week, which represents a 12% increase compared to the previous week."
+            }
+        };
+
+        const PASS_THRESHOLD = 0.5;
+        let stageScores = { 1: null, 2: null, 3: null };
+        let isRunAll = false;
+
+        function loadExample(stageNum) {
+            const ex = EXAMPLES[stageNum];
+            if (stageNum === 2) {
+                document.getElementById('req-2').value = ex.req;
+                document.getElementById('schema-2').value = ex.schema;
+                document.getElementById('res-2').value = ex.res;
+            } else if (stageNum === 3) {
+                document.getElementById('query-3').value = ex.query;
+                document.getElementById('resultset-3').value = ex.resultset;
+                document.getElementById('res-3').value = ex.res;
+            } else {
+                document.getElementById(`req-${stageNum}`).value = ex.req;
+                document.getElementById(`res-${stageNum}`).value = ex.res;
+            }
+            document.getElementById(`results-${stageNum}`).innerHTML = '';
+            stageScores[stageNum] = null;
+            updateHealth();
+        }
+
+        function renderMarkdown(text) {
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // Split into lines for block-level processing
+            const lines = html.split('\n');
+            let out = '';
+            let inOl = false, inUl = false, inSubUl = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+
+                // Headers
+                if (/^### (.+)/.test(line)) { line = `<h3>${RegExp.$1}</h3>`; closeAllLists(); out += line; continue; }
+                if (/^## (.+)/.test(line))  { line = `<h2>${RegExp.$1}</h2>`; closeAllLists(); out += line; continue; }
+                if (/^# (.+)/.test(line))   { line = `<h1>${RegExp.$1}</h1>`; closeAllLists(); out += line; continue; }
+
+                // Nested bullet (  - or    -)
+                if (/^[\s]{2,}- (.+)/.test(line)) {
+                    if (!inSubUl) { out += '<ul>'; inSubUl = true; }
+                    out += `<li>${applyInline(RegExp.$1)}</li>`;
+                    continue;
+                }
+
+                // Close nested list if we're no longer in one
+                if (inSubUl && !/^[\s]{2,}-/.test(line)) {
+                    out += '</ul>'; inSubUl = false;
+                }
+
+                // Ordered list item
+                if (/^\d+\.\s+(.+)/.test(line)) {
+                    if (inUl) { out += '</ul>'; inUl = false; }
+                    if (!inOl) { out += '<ol>'; inOl = true; }
+                    out += `<li>${applyInline(RegExp.$1)}</li>`;
+                    continue;
+                }
+
+                // Top-level bullet
+                if (/^- (.+)/.test(line)) {
+                    if (inOl) { out += '</ol>'; inOl = false; }
+                    if (!inUl) { out += '<ul>'; inUl = true; }
+                    out += `<li>${applyInline(RegExp.$1)}</li>`;
+                    continue;
+                }
+
+                // Regular line — close any open lists
+                closeAllLists();
+                const trimmed = line.trim();
+                if (trimmed) {
+                    out += `<p>${applyInline(trimmed)}</p>`;
+                }
+            }
+            closeAllLists();
+            return out;
+
+            function closeAllLists() {
+                if (inSubUl) { out += '</ul>'; inSubUl = false; }
+                if (inOl) { out += '</ol>'; inOl = false; }
+                if (inUl) { out += '</ul>'; inUl = false; }
+            }
+
+            function applyInline(s) {
+                return s
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`(.+?)`/g, '<code>$1</code>');
+            }
+        }
+
+        function getScoreColor(score) {
+            if (score < 0.4) return '#ef4444';
+            if (score < 0.7) return '#f59e0b';
+            return '#22c55e';
+        }
+
+        let justificationCounter = 0;
+
+        function toggleJustification(id) {
+            const body = document.getElementById(`jbody-${id}`);
+            const btn = document.getElementById(`jtoggle-${id}`);
+            body.classList.toggle('open');
+            btn.classList.toggle('open');
+        }
+
+        function renderResults(stageNum, data, error = null) {
+            const container = document.getElementById(`results-${stageNum}`);
+            const btn = document.querySelector(`#card-${stageNum} .btn-evaluate`);
+
+            btn.disabled = false;
+            btn.innerHTML = 'Evaluate';
+
+            if (error) {
+                container.innerHTML = `<div class="error-msg">Error: ${error}</div>`;
+                stageScores[stageNum] = 0;
+                updateHealth();
+                return;
+            }
+
+            if (!data.evaluator_results || data.evaluator_results.length === 0) {
+                container.innerHTML = '<div class="error-msg">No results returned from judge.</div>';
+                updateHealth();
+                return;
+            }
+
+            let html = '';
+            let totalScore = 0;
+
+            data.evaluator_results.forEach(result => {
+                totalScore += result.score;
+                const color = getScoreColor(result.score);
+                const percentage = Math.round(result.score * 100);
+                const jid = justificationCounter++;
+
+                html += `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-header-left">
+                                <span class="evaluator-name">${result.evaluator_name}</span>
+                                <button class="justification-toggle" id="jtoggle-${jid}" onclick="toggleJustification(${jid})">
+                                    <span class="caret">&#9656;</span>
+                                </button>
+                            </div>
+                            <span class="score-value" style="color: ${color}">${percentage}%</span>
+                        </div>
+                        <div class="score-bar-bg">
+                            <div class="score-bar-fill" style="width: ${percentage}%; background-color: ${color}"></div>
+                        </div>
+                        <div class="justification-body" id="jbody-${jid}">
+                            <div class="justification">${renderMarkdown(result.justification)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const avgScore = totalScore / data.evaluator_results.length;
+            stageScores[stageNum] = avgScore;
+
+            container.innerHTML = html;
+
+            if (isRunAll) {
+                updateGate(stageNum, avgScore);
+            }
+
+            updateHealth();
+        }
+
+        function updateGate(stageNum, score) {
+            const gate = document.getElementById(`gate-${stageNum}`);
+            const pct = Math.round(score * 100);
+            const gateClass = score >= 0.7 ? 'pass' : score >= PASS_THRESHOLD ? 'warn' : 'fail';
+            const label = score >= PASS_THRESHOLD ? 'PASS' : 'FAIL';
+            gate.className = `stage-gate ${gateClass}`;
+            gate.innerHTML = `<span class="gate-dot"></span><span>Stage ${stageNum}: ${label} — ${pct}%</span>`;
+        }
+
+        function setGateSkipped(stageNum, reason) {
+            const gate = document.getElementById(`gate-${stageNum}`);
+            gate.className = 'stage-gate skipped';
+            const msg = reason || 'prior stage failed';
+            gate.innerHTML = `<span class="gate-dot"></span><span>Stage ${stageNum}: Skipped (${msg})</span>`;
+        }
+
+        function resetGates() {
+            for (let i = 1; i <= 3; i++) {
+                const gate = document.getElementById(`gate-${i}`);
+                gate.className = 'stage-gate idle';
+                gate.innerHTML = `<span class="gate-dot"></span><span>Stage ${i}: Pending</span>`;
+            }
+        }
+
+        function buildPayload(stageNum) {
+            if (stageNum === 1) {
+                const req = document.getElementById('req-1').value.trim();
+                const res = document.getElementById('res-1').value.trim();
+                if (!req || !res) return null;
+                return { request: req, response: res };
+            }
+            if (stageNum === 2) {
+                const req = document.getElementById('req-2').value.trim();
+                const schema = document.getElementById('schema-2').value.trim();
+                const res = document.getElementById('res-2').value.trim();
+                if (!req || !schema || !res) return null;
+                return { request: JSON.stringify({ query: req, schema: schema }), response: res };
+            }
+            if (stageNum === 3) {
+                const query = document.getElementById('query-3').value.trim();
+                const resultset = document.getElementById('resultset-3').value.trim();
+                const res = document.getElementById('res-3').value.trim();
+                if (!query || !resultset || !res) return null;
+                return { request: JSON.stringify({ query: query, resultset: resultset }), response: res };
+            }
+        }
+
+        function getMissingFields(stageNum) {
+            const missing = [];
+            if (stageNum === 1) {
+                if (!document.getElementById('req-1').value.trim()) missing.push('Request');
+                if (!document.getElementById('res-1').value.trim()) missing.push('Response');
+            } else if (stageNum === 2) {
+                if (!document.getElementById('req-2').value.trim()) missing.push('Request (QuerySpec)');
+                if (!document.getElementById('schema-2').value.trim()) missing.push('Schema');
+                if (!document.getElementById('res-2').value.trim()) missing.push('Response (SQL)');
+            } else if (stageNum === 3) {
+                if (!document.getElementById('query-3').value.trim()) missing.push('Query (QuerySpec)');
+                if (!document.getElementById('resultset-3').value.trim()) missing.push('Result Set');
+                if (!document.getElementById('res-3').value.trim()) missing.push('Response');
+            }
+            return missing;
+        }
+
+        async function evaluateStage(stageNum) {
+            const container = document.getElementById(`results-${stageNum}`);
+            const btn = document.querySelector(`#card-${stageNum} .btn-evaluate`);
+            const payload = buildPayload(stageNum);
+
+            if (!payload) {
+                const missing = getMissingFields(stageNum);
+                renderResults(stageNum, null, `Missing fields: ${missing.join(', ')}`);
+                return;
+            }
+
+            container.innerHTML = '<span class="spinner"></span> Evaluating...';
+            btn.disabled = true;
+            btn.innerHTML = 'Running...';
+
+            const url = API_ENDPOINT.replace('{judgeId}', JUDGE_IDS[stageNum]);
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Api-Key ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`API Error ${response.status}: ${errText}`);
+                }
+
+                const data = await response.json();
+                renderResults(stageNum, data);
+
+            } catch (err) {
+                renderResults(stageNum, null, err.message);
+            }
+        }
+
+        function updateHealth() {
+            const scores = Object.values(stageScores).filter(s => s !== null);
+            const healthEl = document.getElementById('overallHealth');
+            const container = document.getElementById('healthDisplay');
+
+            if (scores.length === 0) {
+                healthEl.textContent = '--';
+                healthEl.style.color = 'var(--text-main)';
+                container.className = 'health-display idle';
+                return;
+            }
+
+            const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+            const percentage = Math.round(avg * 100);
+            const cls = avg >= 0.7 ? 'pass' : avg >= PASS_THRESHOLD ? 'warn' : 'fail';
+            healthEl.textContent = `${percentage}%`;
+            healthEl.style.color = getScoreColor(avg);
+            container.className = `health-display ${cls}`;
+        }
+
+        function loadAllExamples() {
+            for (let i = 1; i <= 3; i++) {
+                loadExample(i);
+            }
+        }
+
+        function passResultsForward(completedStage) {
+            if (completedStage === 1) {
+                // Stage 1 response (intent spec) -> Stage 2 request
+                const stage1Response = document.getElementById('res-1').value.trim();
+                if (stage1Response) {
+                    document.getElementById('req-2').value = stage1Response;
+                }
+            } else if (completedStage === 2) {
+                // Stage 2 request (querySpec) -> Stage 3 query
+                const stage2Request = document.getElementById('req-2').value.trim();
+                if (stage2Request) {
+                    document.getElementById('query-3').value = stage2Request;
+                }
+            }
+        }
+
+        async function runAll() {
+            const btn = document.getElementById('runAllBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Running Pipeline...';
+            isRunAll = true;
+            resetGates();
+
+            for (let i = 1; i <= 3; i++) {
+                // Pass output from prior stage before evaluating
+                if (i > 1) {
+                    passResultsForward(i - 1);
+                }
+
+                // Check if stage has enough data to evaluate
+                const missing = getMissingFields(i);
+                if (missing.length > 0) {
+                    setGateSkipped(i, `Missing: ${missing.join(', ')}`);
+                    // Skip remaining stages too
+                    for (let j = i + 1; j <= 3; j++) {
+                        setGateSkipped(j);
+                    }
+                    break;
+                }
+
+                await evaluateStage(i);
+
+                if (stageScores[i] !== null && stageScores[i] < PASS_THRESHOLD) {
+                    // Gate failed — skip remaining stages
+                    for (let j = i + 1; j <= 3; j++) {
+                        setGateSkipped(j);
+                    }
+                    break;
+                }
+            }
+
+            isRunAll = false;
+            btn.disabled = false;
+            btn.innerHTML = 'Run All Stages';
+        }
+
+        document.getElementById('runAllBtn').addEventListener('click', runAll);
+    </script>
+</body>
+</html>

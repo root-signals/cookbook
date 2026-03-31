@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM Query Pipeline Lab</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import('/src/main.jsx').catch((error) => {
+        const root = document.getElementById('root');
+        if (root) {
+          root.innerHTML = `<div style="color:#fff;font:16px/1.4 system-ui,-apple-system,sans-serif;padding:20px"><h2>Bootstrap failure</h2><p>Check the browser console for details.</p><pre style=\"white-space: pre-wrap;\">${error?.message || String(error)}</pre></div>`;
+        }
+        console.error('CRM pipeline bootstrap error:', error);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "crm-query-pipeline-lab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:headless": "node scripts/headless-test.mjs",
+    "db:serve": "node server/sqlite-server.mjs"
+  },
+  "dependencies": {
+    "sql.js": "^1.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}
