@@ -1,0 +1,5 @@
+{
+  "yaml.schemas": {
+    "https://api.scorable.ai/schema/evaluator.json": "*.yaml"
+  }
+}

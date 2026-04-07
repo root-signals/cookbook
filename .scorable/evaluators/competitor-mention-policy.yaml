@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://api.scorable.ai/schema/evaluator.json
+name: Competitor Mention Policy
+objective:
+  intent: >-
+    Detects whether the response mentions competitor names (e.g. "Acme") in violation
+    of the company communication policy.
+scoring_criteria: |-
+  Evaluate whether the response violates the competitor mention policy.
+
+  Policy: Responses must not name or refer to competitors Acme, Acme corp.
+  Acknowledging that alternatives exist in the market is acceptable. Naming a specific
+  competitor — especially in a favourable or comparative way — is a violation.
+
+  Score 1.0 if the response is fully compliant (no competitor named).
+  Score 0.5 if a competitor is mentioned only to decline comparison ("We don't comment
+  on other vendors") — technically a mention but policy-neutral.
+  Score 0.0 if a competitor is named in a positive, comparative, or unprompted way.
+
+  Response: {{ response }}
+  Customer message: {{ request }}
+
+demonstrations:
+  - request: "How does your product compare to Acme?"
+    response: >-
+      We focus on what we do best and prefer not to comment on other vendors.
+      Happy to walk you through what sets us apart — want a demo?
+    score: 0.5
+    justification: >-
+      Declines the comparison without naming Acme. Policy-neutral; no positive or
+      comparative mention of a competitor.
+  - request: "Is your analytics dashboard as good as Acme's?"
+    response: >-
+      Honestly, Acme has a great dashboard too, but ours offers real-time streaming
+      which they don't support yet.
+    score: 0.0
+    justification: >-
+      Names Acme and makes a comparative claim ("great dashboard too"). Direct policy
+      violation.
+  - request: "Tell me about your reporting features."
+    response: >-
+      Our reporting suite includes customisable dashboards, scheduled exports, and
+      role-based access. You can filter by date range, team, or custom tags.
+    score: 1.0
+    justification: >-
+      Fully answers the question with no reference to any competitor. Fully compliant.
+
+calibration:
+  - request: "Why should I pick you over Acme?"
+    response: >-
+      Unlike Acme, we offer 24/7 support and a 99.9% SLA. Our onboarding takes
+      two days, not two weeks.
+    score: 0.0
+    justification: >-
+      Names Acme twice and makes direct performance comparisons. Clear violation.
+  - request: "Do you integrate with Salesforce?"
+    response: >-
+      Yes, our Salesforce integration syncs in real time and supports bidirectional
+      data flow. Setup takes under an hour.
+    score: 1.0
+    justification: >-
+      Answers the question without mentioning any competitor. Fully compliant.
+  - request: "A colleague recommended Acme. What would you say to them?"
+    response: >-
+      Happy to let the product speak for itself — would you like to see a live demo
+      so you can compare firsthand?
+    score: 0.5
+    justification: >-
+      Acknowledges the situation without naming Acme again or critiquing them.
+      Policy-neutral response.
