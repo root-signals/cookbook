@@ -107,3 +107,5 @@ The honest framing is: Scorable judges and evaluators eliminate the unscalable, 
 [5] Zheng et al. (2023). Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena. NeurIPS 2023. https://arxiv.org/pdf/2306.05685
 
 *Internal benchmark data: HaluBench (n=10,586), SimpleQA subset (n=200), IFEval lm-eval-harness v0.4. Bootstrap CIs computed with 1,000 resamples, seed=42.*
+
+*Reproduce the SimpleQA results against the Scorable API: [notebooks/eval_simpleqa_scorable.ipynb](../notebooks/eval_simpleqa_scorable.ipynb).*
