@@ -1,6 +1,6 @@
 """RAG evals using Scorable's built-in context-aware evaluators.
 
-No custom judge prompts — Scorable provides Faithfulness and Context_Recall
+No custom judge prompts — Scorable provides Faithfulness and Truthfulness
 as first-class evaluators designed for RAG pipelines.
 
 Requires:
@@ -29,13 +29,13 @@ from pydantic_ai.messages import (
 )
 
 # ---------------------------------------------------------------------------
-# Test dataset — questions with ground truth answers for Context_Recall
+# Test dataset — questions with ground truth answers for Truthfulness
 # ---------------------------------------------------------------------------
 
 TEST_CASES = [
     {
         'question': 'How do I run a RAG evaluation with Scorable?',
-        'expected': 'Use the Faithfulness and Context_Recall evaluators, passing the request, response, and retrieved context chunks.',
+        'expected': 'Use the Faithfulness and Truthfulness evaluators, passing the request, response, and retrieved context chunks.',
     },
     {
         'question': 'What is the difference between an evaluator and a judge in Scorable?',
@@ -130,18 +130,18 @@ async def test_faithfulness(case: dict, rag_deps, scorable: Scorable) -> None:
 
 @pytest.mark.anyio
 @pytest.mark.parametrize('case', TEST_CASES, ids=[c['question'][:40] for c in TEST_CASES])
-async def test_context_recall(case: dict, rag_deps, scorable: Scorable) -> None:
+async def test_truthfulness(case: dict, rag_deps, scorable: Scorable) -> None:
     """Retrieved context must contain enough information to produce the correct answer."""
     rag_result = await rag_agent.run(case['question'], deps=rag_deps)
     _, contexts = extract_rag_components(rag_result)
 
-    result = scorable.evaluators.Context_Recall(
+    result = scorable.evaluators.Truthfulness(
         request=case['question'],
         contexts=contexts,
         expected_output=case['expected'],
         tags=TAGS,
         system_prompt=SYSTEM_PROMPT,
     )
-    print(f'\n[context_recall] {result.score:.2f} — {result.justification}')
+    print(f'\n[truthfulness] {result.score:.2f} — {result.justification}')
 
-    assert result.score >= MIN_SCORE, f'Context recall too low ({result.score:.2f}): {result.justification}'
+    assert result.score >= MIN_SCORE, f'Truthfulness too low ({result.score:.2f}): {result.justification}'
