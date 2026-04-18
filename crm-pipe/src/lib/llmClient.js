@@ -9,7 +9,7 @@ export const LLM_MODES = {
   OPENAI: 'openai',
 };
 
-export const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
+export const DEFAULT_OPENAI_MODEL = 'gpt-5.4-mini';
 const OPENAI_COMPLETIONS_URL = 'https://api.openai.com/v1/chat/completions';
 
 export function resolveRuntimeConfig(input = {}) {

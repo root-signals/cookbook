@@ -25,7 +25,7 @@ const sampleQuestions = [
 const defaultRuntime = {
   llmMode: LLM_MODES.MOCK,
   openaiKey: '',
-  openaiModel: 'gpt-4.1-mini',
+  openaiModel: 'gpt-5.4-mini',
   sqlMode: SQL_MODES.SQLITE,
 };
 
@@ -324,9 +324,7 @@ export default function App() {
           <p>{answer || 'Run a query to generate an answer.'}</p>
           <div className="card-actions">
             <CopyButton text={answer} label="Copy answer" />
-            <button type="button" onClick={copyAllPayloads}>
-              Copy evaluator payloads
-            </button>
+
           </div>
         </Card>
       </main>

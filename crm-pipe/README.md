@@ -32,4 +32,4 @@ node scripts/headless-test.mjs
 
 ## Using OpenAI mode
 
-In the UI, switch **LLM mode** to "OpenAI (GPT)", paste your API key, and pick a model (default: `gpt-4.1-mini`). The key is stored in localStorage and never sent to any server other than OpenAI.
+In the UI, switch **LLM mode** to "OpenAI (GPT)", paste your API key, and pick a model (default: `gpt-5.4-mini`). The key is stored in localStorage and never sent to any server other than OpenAI.
