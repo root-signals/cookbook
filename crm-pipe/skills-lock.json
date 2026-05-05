@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "scorable-integration": {
+      "source": "root-signals/scorable-skills",
+      "sourceType": "github",
+      "skillPath": "skills/scorable-integration/SKILL.md",
+      "computedHash": "029511bd4e194cb1dee0a69b9b36003836504b4738e761ec38d32bcd75b15e63"
+    },
+    "scorable-otel-evaluation": {
+      "source": "root-signals/scorable-skills",
+      "sourceType": "github",
+      "skillPath": "skills/scorable-otel-evaluation/SKILL.md",
+      "computedHash": "c8b3554ae194141a16f1f5758d87d467dcbc3143c3bab5f6cb8f2aea5fce9f10"
+    }
+  }
+}
