@@ -3,31 +3,30 @@
 A Pydantic AI agent that, given a company's website URL, fetches the company's
 legal documents (privacy policy, terms of service, cookie policy, DPA,
 sub-processors, acceptable-use, security/trust) and produces a single markdown
-summary with inline `[source: <url>]` citations.
+summary with inline `[N]` citations.
 
-The summary is then scored by Scorable's **Faithfulness_to_Citations** evaluator,
-which extracts the cited URLs from the response, fetches them server-side, and
-checks whether every claim in the summary is actually supported by what those
-URLs say.
+The interesting part isn't the agent — it's the **two ways to score it with
+Scorable**, shown side by side:
 
-## How it works
+| File | How it evaluates | When the score arrives |
+| --- | --- | --- |
+| `evaluate_with_sdk.py` | Calls the evaluator directly via the **SDK**, in-process | Synchronously, right after the run |
+| `evaluate_with_otel.py` | Ships the run to Scorable as an **OpenTelemetry trace**; a filter scores it server-side | Asynchronously, in the dashboard |
 
-1. **Discovery from the sitemap.** The agent's first `WebFetch` is
-   `<company_url>/sitemap.xml`. It falls back to `/sitemap_index.xml`, then
-   `/robots.txt`, then the homepage if needed. Sitemaps list every public URL
-   on a site, so there's no need to interpret nav menus or guess footer
-   conventions.
-2. **Filter for legal paths.** From the sitemap entries, the agent picks URLs
-   whose paths match conventional legal-document keywords (`privacy`, `terms`,
-   `tos`, `cookie`, `dpa`, `subprocessor`, `acceptable-use`, `aup`, `security`,
-   `trust`).
-3. **Fetch each one.** Using `WebFetch` again — one call per selected URL.
-4. **Summarize with citations.** The agent produces one markdown doc with a
-   `##` section per document type it actually found. Every factual claim is
-   followed by `[source: <url>]`.
-5. **Score.** `scorable.evaluators.Faithfulness_to_Citations(request, response)`.
-   The evaluator pulls URLs out of the response and grounds the score in their
-   real contents.
+Both import the same agent from `agent.py`. The agent is identical; only the
+evaluation wiring differs.
+
+## How the agent works
+
+1. **Discovery from the sitemap.** First `WebFetch` is `<url>/sitemap.xml`,
+   falling back to `/sitemap_index.xml`, `/robots.txt`, then the homepage.
+2. **Filter for legal paths** (`privacy`, `terms`, `cookie`, `dpa`, …).
+3. **Fetch each one** with `WebFetch`.
+4. **Summarize with numbered citations** — one `##` section per document type,
+   every claim ending in `[N]`, and a `## References` list mapping `[N]` → URL.
+
+`Faithfulness_to_Citations` then pulls those URLs out of the response, fetches
+them, and checks whether every claim is actually supported.
 
 ## Setup
 
@@ -36,42 +35,101 @@ cd cookbook/legal-summarizer
 uv sync
 ```
 
-Required environment variables:
-
-- `OPENAI_API_KEY` — for the pydantic-ai agent (uses `openai:gpt-5.4-mini`).
-- `SCORABLE_API_KEY` — for the Faithfulness_to_Citations evaluator.
-  Get one at <https://scorable.ai/settings/api-keys>. If unset, the run still
-  produces a summary; evaluation is skipped with a log line.
-
-A `.env` file is gitignored — fill in the keys there and uv will load it
-automatically with `--env-file`:
+Fill in `.env` (gitignored — `uv run --env-file .env` loads it automatically):
 
 ```sh
-cp .env .env.local   # optional, only if you want a separate file
-$EDITOR .env
+OPENAI_API_KEY=...            # the agent uses openai:gpt-5.4-mini
+
+# For evaluate_with_sdk.py:
+SCORABLE_API_KEY=...          # get one at https://scorable.ai/settings/api-keys
+
+# For evaluate_with_otel.py:
+SCORABLE_OTEL_ENDPOINT=https://api.scorable.ai/otel/v1/traces
+SCORABLE_OTEL_API_KEY=...     # a Scorable API key
 ```
 
-## Run
+---
+
+## Path 1 — evaluate with the SDK (in-process)
+
+The simplest path: run the agent, then call the evaluator directly. The score
+comes back in the same process, right after the run.
 
 ```sh
-uv run --env-file .env legal-summarizer --url https://scorable.ai --md-out scorable.md
+uv run --env-file .env python evaluate_with_sdk.py --url https://scorable.ai
 ```
 
-Flags:
+Prints the summary, then:
 
-| Flag             | Meaning                                                |
-| ---------------- | ------------------------------------------------------ |
-| `--url`          | Required. Company base URL (e.g. `https://example.com`). |
-| `--md-out PATH`  | Write a markdown report (summary + score + justification + fetched URLs). |
-| `--json`         | Print the full result as JSON instead of formatted text. |
-| `--no-evaluate`  | Skip the Faithfulness_to_Citations call.               |
-| `-v` / `--verbose` | Debug logging.                                       |
+```
+========================================================================
+Faithfulness to Citations: 0.93 / 1.00
+========================================================================
+110/116 assertions supported; errors concentrated in …
+```
 
-## Notes
+The whole integration is two lines:
 
-- The agent uses Pydantic AI's `WebFetch(local=True)` capability — native when
-  the model supports it, with a local markdownify-based fallback otherwise. No
-  web search is used: discovery is purely sitemap-driven.
-- Faithfulness_to_Citations doesn't need `contexts` because it reads the
-  cited URLs straight out of the response. That's the whole point of this
-  evaluator vs. regular `Faithfulness`.
+```python
+client = Scorable(run_async=True)
+result = await client.evaluators.Faithfulness_to_Citations(request=url, response=summary)
+```
+
+Use this when you want the score inline — gating a response, a CI check, a
+quick experiment.
+
+---
+
+## Path 2 — evaluate via OpenTelemetry traces (server-side)
+
+Here you don't call an evaluator. You **instrument the agent**, so every run is
+exported to Scorable as an OTel trace, and a one-time **evaluation filter**
+scores matching traces server-side. The score appears in the dashboard,
+embedded in the trace.
+
+### One-time setup: create the filter (via the CLI)
+
+Find the evaluator's id, then wire it to incoming traces:
+
+```sh
+# install the CLI once: curl -sSL https://scorable.ai/cli/install.sh | sh
+scorable login
+
+# look up the evaluator id
+scorable evaluator list --name "Faithfulness to Citations"
+
+# create a filter that runs it on every incoming trace
+scorable otel-filter create \
+    --name "legal-summarizer-faithfulness" \
+    --evaluator-id <Faithfulness to Citations evaluator id>
+```
+
+(Scope it to this agent's traces with
+`--filter-criteria '{"conditions":[{"column":"resource","type":"string","key":"service.name","operator":"=","value":"legal-summarizer"}]}'`
+if you have other traces flowing in. List existing filters with
+`scorable otel-filter list`.)
+
+### Run
+
+```sh
+uv run --env-file .env python evaluate_with_otel.py --url https://scorable.ai
+```
+
+Prints the summary and confirms the trace was sent. The score is produced
+asynchronously by the filter
+
+```sh
+scorable otel-trace list
+```
+
+The integration is one line — attach a tracer provider to the agent:
+
+```python
+agent.instrument = InstrumentationSettings(tracer_provider=provider)
+```
+
+Use this when evaluation should be decoupled from your app: score production
+traffic continuously, without putting an evaluator call on the request path.
+
+---
+

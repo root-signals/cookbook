@@ -1,20 +1,31 @@
-"""Legal-document summarizer agent.
+"""Legal-document summarizer agent (shared by both evaluation examples).
 
 A Pydantic AI agent that, given a company's website URL, fetches the
 company's legal documents (privacy policy, terms of service, cookie policy,
 DPA, sub-processors, acceptable-use, security/trust) and produces a single
-markdown summary with inline `[source: <url>]` citations.
+markdown summary with inline `[N]` citations.
 
 Discovery starts from the site's sitemap rather than the homepage — sitemaps
 list every public URL by design, so the agent doesn't have to interpret nav
 menus or guess footer conventions.
+
+This module is intentionally evaluation-agnostic: it defines the agent and a
+`run_agent` helper, but wires up no Scorable evaluation. The two example
+scripts (`evaluate_with_sdk.py`, `evaluate_with_otel.py`) show the two ways to
+score its output.
 """
 
 from __future__ import annotations
 
+import json
+from dataclasses import dataclass
+
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import WebFetch
+from pydantic_ai.messages import ModelMessage, ToolCallPart
+
+AGENT_NAME = "legal-summarizer"
 
 LEGAL_SUMMARIZER_SYSTEM_PROMPT = """
 You are a legal-document summarizer for company websites.
@@ -89,12 +100,46 @@ posts, careers pages, etc.
 
 class LegalSummarizerDeps(BaseModel):
     company_url: str = Field(description="Base URL of the company website, e.g. https://scorable.ai")
-    chat_id: str = Field(default="local", description="Conversation identifier for tracing")
 
 
 agent: Agent[LegalSummarizerDeps, str] = Agent(
     model="openai:gpt-5.4-mini",
+    name=AGENT_NAME,
     deps_type=LegalSummarizerDeps,
     capabilities=[WebFetch(local=True)],
     system_prompt=LEGAL_SUMMARIZER_SYSTEM_PROMPT,
 )
+
+
+@dataclass
+class AgentRun:
+    summary: str
+    fetched_urls: list[str]
+
+
+def _extract_fetched_urls(messages: list[ModelMessage]) -> list[str]:
+    """Pull every URL the agent passed to a web_fetch tool call."""
+    urls: list[str] = []
+    seen: set[str] = set()
+    for message in messages:
+        for part in getattr(message, "parts", []):
+            if not isinstance(part, ToolCallPart):
+                continue
+            args = part.args
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    continue
+            if not isinstance(args, dict):
+                continue
+            url = args.get("url") or args.get("uri")
+            if isinstance(url, str) and url not in seen:
+                seen.add(url)
+                urls.append(url)
+    return urls
+
+
+async def run_agent(company_url: str) -> AgentRun:
+    result = await agent.run(company_url, deps=LegalSummarizerDeps(company_url=company_url))
+    return AgentRun(summary=result.output, fetched_urls=_extract_fetched_urls(result.all_messages()))
